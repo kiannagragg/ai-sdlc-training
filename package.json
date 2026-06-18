@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --no-error-on-unmatched-pattern",
+    "test": "echo \"No tests yet\" && exit 0",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
