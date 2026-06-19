@@ -1,11 +1,11 @@
 # Meridian LMS — Deploy Workflow
-# Production deploy on push to main, preview deploy on push to staging
+# Runs on push to main: lint → type-check → test → production migration → Vercel deploy
 
 name: Deploy
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
 
 env:
   NODE_VERSION: "24"
@@ -34,6 +34,7 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
+    needs: [lint]
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +53,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: [type-check]
     steps:
       - uses: actions/checkout@v4
 
@@ -67,10 +69,32 @@ jobs:
       - name: Run tests
         run: npm run test
 
+  db-migrate-production:
+    name: Database Migration (Production)
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to production project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push migrations to production
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
   deploy-vercel:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test]
+    needs: [db-migrate-production]
     steps:
       - uses: actions/checkout@v4
 
@@ -84,36 +108,10 @@ jobs:
         run: npm ci
 
       - name: Pull Vercel environment
-        run: npx vercel pull --yes --environment=${{ github.ref_name == 'main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build project artifacts
         run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy to Vercel
-        id: deploy
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-          else
-            npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-          fi
-
-  db-migrate:
-    name: Database Migration
-    runs-on: ubuntu-latest
-    needs: [deploy-vercel]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Push migrations
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            supabase db push --db-url "${{ secrets.SUPABASE_DB_URL_PRODUCTION }}"
-          else
-            supabase db push --db-url "${{ secrets.SUPABASE_DB_URL_STAGING }}"
-          fi
+      - name: Deploy to Vercel production
+        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

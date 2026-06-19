@@ -67,7 +67,6 @@ meridian-lms/
 │   └── errors.ts           # AppError class
 ├── types/                  # Supabase-generated types
 ├── supabase/               # Migrations, seed, config
-├── middleware.ts            # Edge auth middleware
 └── knowledge/              # AI-assistance knowledge base
 ```
 
@@ -103,6 +102,18 @@ npx supabase db push  # applies migrations to staging
 
 Production is deployed exclusively via GitHub Actions CI/CD (see `.github/workflows/deploy.yml`).
 Never run `supabase db push` against production from a local machine.
+
+## Rollback Procedure
+
+### App code rollback (Vercel)
+
+Navigate to the Vercel dashboard → **Deployments** tab → find the last known-good deployment → click **Promote to Production**. This is instant and requires no code change. Use this for logic bugs, UI regressions, or any bad deploy that passed CI.
+
+### Schema rollback (Supabase)
+
+A Vercel rollback alone is not sufficient once a migration has been applied to production. Schema changes must be reversed by writing a **new forward migration** that undoes the undesired change (e.g., `DROP COLUMN`, `ALTER TABLE ... DROP CONSTRAINT`). Never delete or revert a committed migration file — the `supabase_migrations` history table tracks applied filenames, and removing a file creates drift between the codebase and the database.
+
+The rollback migration follows the normal flow: author the file locally, commit it to a branch, open a PR (which validates it against staging via CI), then merge to main (which applies it to production before deploying the updated app code).
 
 ### PgBouncer / Supavisor Note
 
