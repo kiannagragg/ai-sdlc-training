@@ -78,7 +78,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // /admin/users/* — sys_admin only
   if (pathname.startsWith('/admin/users/')) {
     if (!ALLOWED_ADMIN_USERS.includes(role)) {
-      return NextResponse.redirect(new URL('/admin/requests', request.url));
+      return NextResponse.redirect(new URL('/admin', request.url));
     }
     return supabaseResponse;
   }
@@ -87,13 +87,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (pathname.startsWith('/admin/')) {
     if (!ALLOWED_ADMIN.includes(role)) {
       if (role === 'employee') {
-        return NextResponse.redirect(new URL('/employee/dashboard', request.url));
+        return NextResponse.redirect(new URL('/employee', request.url));
       }
       if (role === 'manager') {
         return NextResponse.redirect(new URL('/manager', request.url));
       }
       if (role === 'sys_admin') {
-        return NextResponse.redirect(new URL('/admin/users', request.url));
+        return NextResponse.redirect(new URL('/sysadmin', request.url));
       }
     }
     return supabaseResponse;
@@ -102,7 +102,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // /manager/* — manager, hr_admin, or sys_admin
   if (pathname.startsWith('/manager/')) {
     if (!ALLOWED_MANAGER.includes(role)) {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
+      return NextResponse.redirect(new URL('/employee', request.url));
     }
     return supabaseResponse;
   }

@@ -1,63 +1,19 @@
 'use client';
 
+// @stratpoint.com domain restriction deferred for training project.
+// In production, enable Supabase Auth email domain allow-list and
+// restore client-side validation before calling signInWithOtp.
+
 import { useState, type FormEvent } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Mail, CheckCircle2, ChevronDown, ChevronRight, AlertCircle, Loader2, Shield } from 'lucide-react';
-import type { UserRole } from './types';
+import { Mail, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
-interface DemoAccount {
-  role: UserRole;
-  label: string;
-  name: string;
-  email: string;
-  description: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    role: 'employee',
-    label: 'Employee',
-    name: 'Miguel Santos',
-    email: 'miguel.santos@stratpoint.com',
-    description: 'Submit leave requests, view balances',
-  },
-  {
-    role: 'manager',
-    label: 'Line Manager',
-    name: 'Ana Reyes',
-    email: 'ana.reyes@stratpoint.com',
-    description: 'Approve requests, view team calendar',
-  },
-  {
-    role: 'hr_admin',
-    label: 'HR Administrator',
-    name: 'Carmen Ortiz',
-    email: 'carmen.ortiz@stratpoint.com',
-    description: 'Full org access, reports, audit log',
-  },
-  {
-    role: 'sys_admin',
-    label: 'System Administrator',
-    name: 'Joel Reyes',
-    email: 'joel.reyes@stratpoint.com',
-    description: 'User and role management',
-  },
-];
-
-interface LoginPageProps {
-  onLogin?: (role: UserRole) => void;
-}
-
-export function LoginPage({ onLogin }: LoginPageProps = {}) {
+export function LoginPage() {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [showDemo, setShowDemo] = useState(false);
   const [touched, setTouched] = useState(false);
-
-  const emailError = touched && email.length > 0 && !email.endsWith('@stratpoint.com')
-    ? 'Access denied. Only @stratpoint.com email addresses are permitted.'
-    : '';
 
   function handleEmailChange(value: string) {
     setEmail(value);
@@ -68,29 +24,31 @@ export function LoginPage({ onLogin }: LoginPageProps = {}) {
     e.preventDefault();
     setTouched(true);
 
-    if (!email || !email.endsWith('@stratpoint.com')) {
+    if (!email) {
       setState('error');
-      setErrorMessage('Access denied. Only @stratpoint.com email addresses are permitted.');
+      setErrorMessage('Please enter your email address.');
       return;
     }
 
     setState('sending');
     setErrorMessage('');
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setState('error');
+      setErrorMessage(error.message);
+      return;
+    }
 
     setState('sent');
-  }
-
-  function handleDemoClick(acc: DemoAccount) {
-    if (onLogin) {
-      onLogin(acc.role);
-    } else {
-      setEmail(acc.email);
-      setTouched(true);
-      setState('idle');
-      setErrorMessage('');
-    }
   }
 
   function handleReset() {
@@ -110,7 +68,8 @@ export function LoginPage({ onLogin }: LoginPageProps = {}) {
             </div>
             <h1 className="mb-2 text-2xl font-semibold text-foreground">Check your inbox</h1>
             <p className="mb-2 text-muted-foreground">
-              A magic link has been sent to <strong className="text-foreground">{email}</strong>. Click the link to sign in.
+              A magic link has been sent to <strong className="text-foreground">{email}</strong>.
+              Click the link to sign in.
             </p>
             <button
               type="button"
@@ -151,8 +110,8 @@ export function LoginPage({ onLogin }: LoginPageProps = {}) {
                 <Mail
                   className={cn(
                     'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground',
-                    email.length > 0 && !emailError && 'text-emerald-600',
-                    emailError && 'text-destructive',
+                    touched && email.length > 0 && 'text-emerald-600',
+                    state === 'error' && errorMessage && 'text-destructive',
                   )}
                 />
                 <input
@@ -161,29 +120,23 @@ export function LoginPage({ onLogin }: LoginPageProps = {}) {
                   value={email}
                   onChange={(e) => handleEmailChange(e.target.value)}
                   onBlur={() => setTouched(true)}
-                  placeholder="username@stratpoint.com"
+                  placeholder="you@example.com"
                   disabled={state === 'sending'}
                   autoComplete="email"
-                  aria-invalid={emailError ? true : undefined}
-                  aria-describedby={emailError ? 'email-error' : undefined}
+                  aria-invalid={state === 'error' && errorMessage ? true : undefined}
+                  aria-describedby={state === 'error' && errorMessage ? 'email-error' : undefined}
                   className={cn(
                     'flex h-11 w-full rounded-lg border bg-input-background px-4 pl-10 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors',
                     'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20',
                     'disabled:cursor-not-allowed disabled:opacity-50',
-                    emailError && 'border-destructive focus:border-destructive focus:ring-destructive/20',
-                    email.length > 0 && !emailError && 'border-emerald-500',
+                    state === 'error' && errorMessage && 'border-destructive focus:border-destructive focus:ring-destructive/20',
+                    touched && email.length > 0 && !errorMessage && 'border-emerald-500',
                   )}
                 />
               </div>
-              {emailError && touched && (
-                <p id="email-error" role="alert" className="mt-1.5 text-xs text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {emailError}
-                </p>
-              )}
             </div>
 
-            {state === 'error' && errorMessage && !emailError && (
+            {state === 'error' && errorMessage && (
               <div
                 role="alert"
                 className="mb-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -213,56 +166,6 @@ export function LoginPage({ onLogin }: LoginPageProps = {}) {
               )}
             </button>
           </form>
-        </div>
-
-        <div className="mt-4 rounded-xl border bg-card shadow-sm">
-          <button
-            type="button"
-            onClick={() => setShowDemo(!showDemo)}
-            className="flex w-full items-center justify-between px-6 py-4 text-sm font-medium text-foreground"
-            aria-expanded={showDemo}
-          >
-            <span>Demo Accounts</span>
-            {showDemo ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-          {showDemo && (
-            <div className="border-t px-6 pb-4 pt-3">
-              <p className="mb-3 text-xs text-muted-foreground">
-                Click an account to {onLogin ? 'simulate login' : 'auto-fill the email'}:
-              </p>
-              <div className="space-y-2">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleDemoClick(acc)}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
-                      'hover:bg-accent hover:border-accent-foreground/20',
-                      'focus:outline-none focus:ring-2 focus:ring-ring/20',
-                    )}
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground">
-                      {acc.name.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">{acc.name}</span>
-                        <span className="text-[10px] rounded-md bg-secondary px-1.5 py-0.5 font-medium text-secondary-foreground whitespace-nowrap">
-                          {acc.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{acc.description}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
