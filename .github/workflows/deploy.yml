@@ -79,7 +79,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.107.0
 
       - name: Link to production project
         run: supabase link --project-ref ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
