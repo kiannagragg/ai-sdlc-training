@@ -25,5 +25,15 @@ export default [
       'no-undef': 'off',
     },
   },
+  {
+    files: ['jest.config.js'],
+    languageOptions: {
+      globals: {
+        module: 'writable',
+        require: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
   { ignores: ['docs/**', 'node_modules/**', '.next/**'] },
 ];
