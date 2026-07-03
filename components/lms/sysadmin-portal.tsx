@@ -86,7 +86,7 @@ export function SysAdminPortal() {
           <p className="text-sm font-medium text-blue-800">System Administration Scope</p>
           <p className="text-xs text-blue-700">
             You have full access to manage users, roles, and system-wide settings across all
-            departments, offices, and branches of Meridian Corporation.
+            departments, offices, and branches of the corporation.
           </p>
         </div>
       </div>

@@ -7,8 +7,8 @@ import './globals.css';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: { default: 'Meridian LMS', template: '%s | Meridian LMS' },
-  description: 'Leave Management System for Meridian Corporation',
+  title: { default: 'LeaveTrack', template: '%s | LeaveTrack' },
+  description: 'Leave Management System',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

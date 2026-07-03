@@ -120,7 +120,7 @@ export function AppShell({ children, role }: AppShellProps) {
             <span className="text-sm font-bold text-primary-foreground">M</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-foreground">Meridian LMS</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">LeaveTrack</span>
             <span className="text-[10px] text-muted-foreground">{roleLabels[role]}</span>
           </div>
           <button
