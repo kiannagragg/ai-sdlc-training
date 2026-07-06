@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const STRATPOINT_DOMAIN = '@stratpoint.com';
+
+export const stratpointEmailSchema = z
+  .string()
+  .email('Must be a valid email address')
+  .refine(
+    (email) => email.toLowerCase().endsWith(STRATPOINT_DOMAIN),
+    { message: `Only ${STRATPOINT_DOMAIN} email addresses are allowed` },
+  );
+
 const uuidSchema = z.string().uuid();
 
 const leaveTypeSchema = z.enum([

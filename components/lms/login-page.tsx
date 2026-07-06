@@ -1,19 +1,45 @@
 'use client';
 
-// @stratpoint.com domain restriction deferred for training project.
-// In production, enable Supabase Auth email domain allow-list and
-// restore client-side validation before calling signInWithOtp.
-
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { Mail, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
-export function LoginPage() {
+const STRATPOINT_DOMAIN = '@stratpoint.com';
+const STORAGE_KEY = 'stratpoint_login_email';
+
+function getCallbackMessage(error?: string): string | null {
+  switch (error) {
+    case 'domain_restricted':
+      return 'Sign-in denied: only @stratpoint.com email addresses are permitted.';
+    case 'profile_not_found':
+      return 'Account not found. Please contact HR to set up your profile.';
+    case 'auth_failed':
+      return 'Authentication failed. Please try again.';
+    case 'missing_code':
+      return 'Invalid magic link. Please request a new one.';
+    default:
+      return null;
+  }
+}
+
+interface LoginPageProps {
+  callbackError?: string;
+}
+
+export function LoginPage({ callbackError }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    const msg = getCallbackMessage(callbackError);
+    if (msg) {
+      setState('error');
+      setErrorMessage(msg);
+    }
+  }, [callbackError]);
 
   function handleEmailChange(value: string) {
     setEmail(value);
@@ -24,19 +50,32 @@ export function LoginPage() {
     e.preventDefault();
     setTouched(true);
 
-    if (!email) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setState('error');
       setErrorMessage('Please enter your email address.');
+      return;
+    }
+
+    if (!normalizedEmail.endsWith(STRATPOINT_DOMAIN)) {
+      setState('error');
+      setErrorMessage('Only @stratpoint.com email addresses are allowed.');
       return;
     }
 
     setState('sending');
     setErrorMessage('');
 
+    // Persist email so the callback can re-render it after redirect
+    try {
+      sessionStorage.setItem(STORAGE_KEY, normalizedEmail);
+    } catch { /* noop */ }
+
     const supabase = createClient();
 
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: normalizedEmail,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -120,7 +159,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => handleEmailChange(e.target.value)}
                   onBlur={() => setTouched(true)}
-                  placeholder="you@example.com"
+                  placeholder="you@stratpoint.com"
                   disabled={state === 'sending'}
                   autoComplete="email"
                   aria-invalid={state === 'error' && errorMessage ? true : undefined}

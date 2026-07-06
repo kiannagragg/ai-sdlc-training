@@ -59,6 +59,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(loginUrl);
   }
 
+  // ── Domain enforcement (server-side, defense in depth) ─────────────
+  const email = user.email?.toLowerCase() ?? '';
+  if (!email.endsWith('@stratpoint.com')) {
+    await supabase.auth.signOut();
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('error', 'domain_restricted');
+    return NextResponse.redirect(loginUrl);
+  }
+
   // ── Role lookup (DB query, not JWT claim) ──────────────────────────
   const { data: profile } = await supabase
     .from('profiles')
