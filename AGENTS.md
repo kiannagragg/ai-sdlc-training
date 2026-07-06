@@ -26,6 +26,12 @@ Leave Management System for Meridian Corp (800 employees, 120 managers, 5 HR, 1 
   requestId } format
 - Request ID format: LR-YYYY-NNNN (auto-increment per year)
 - All handlers emit structured logging (request ID, action, duration, outcome)
+- Only public.leaves and public.leave_balances have audit triggers
+  (log_audit_event) — never write application-layer INSERTs to
+  audit_log; the trigger handles it within the same transaction
+- audit_log has no deleted_at column and is not soft-deleteable —
+  never apply soft-delete patterns, add deleted_at, or attempt
+  UPDATE or DELETE on audit_log rows
 
 ## Frontend Standards
 - Server Components by default; Client Components only when interactivity needed
@@ -39,8 +45,10 @@ Leave Management System for Meridian Corp (800 employees, 120 managers, 5 HR, 1 
 
 ## Security Rules
 - Supabase service role key NEVER in client bundle (no NEXT_PUBLIC prefix)
-- RLS is the single source of authorization truth — frontend role checks are
-  UX convenience only
+- Authorization uses three non-optional layers: (1) middleware for
+  role-based route access, (2) Supabase RLS for row-level data
+  isolation, (3) server-side query scoping for manager direct-report
+  enforcement — omitting any layer is a security defect
 - Audit log is append-only: RLS blocks UPDATE/DELETE for all roles including
   service_role
 - Soft-delete only: all business tables have deleted_at; RLS blocks DELETE
