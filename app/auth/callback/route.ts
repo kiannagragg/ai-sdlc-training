@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=missing_code', origin));
   }
 
+  // 1. We create a generic next response solely to capture cookie mutations
   let response = NextResponse.next();
 
   const supabase = createServerClient<Database>(
@@ -39,20 +40,21 @@ export async function GET(request: NextRequest) {
     }
   );
 
+  // 2. Exchange the code for a fresh token session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
     return NextResponse.redirect(new URL('/login?error=auth_failed', origin));
   }
 
-  // Domain restriction
+  // Domain restriction enforcement
   const email = data.user.email?.toLowerCase() ?? '';
   if (!email.endsWith(STRATPOINT_DOMAIN)) {
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL('/login?error=domain_restricted', origin));
   }
 
-  // Role lookup
+  // Role routing lookup
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -65,8 +67,10 @@ export async function GET(request: NextRequest) {
 
   const target = roleToDashboard[profile.role] ?? '/employee';
 
+  // 3. Create our final dashboard destination redirect response
   const finalRedirect = NextResponse.redirect(new URL(target, origin));
 
+  // 4. CRITICAL STEP: Copy all generated session cookies over to the final headers
   response.headers.forEach((value, key) => {
     if (key.toLowerCase() === 'set-cookie') {
       finalRedirect.headers.append('set-cookie', value);
