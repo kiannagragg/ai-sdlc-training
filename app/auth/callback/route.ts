@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=missing_code', origin));
   }
 
-  // Build response first so we can attach cookies to it
-  const redirectResponse = NextResponse.redirect(new URL('/employee', origin));
+  let response = NextResponse.next();
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,10 +30,9 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // Write cookies to BOTH the request and the redirect response
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value);
-            redirectResponse.cookies.set(name, value, options);
+            response.cookies.set(name, value, options);
           });
         },
       },
@@ -67,8 +65,13 @@ export async function GET(request: NextRequest) {
 
   const target = roleToDashboard[profile.role] ?? '/employee';
 
-  // Update the redirect URL to the correct dashboard
-  return NextResponse.redirect(new URL(target, origin), {
-    headers: redirectResponse.headers,
+  const finalRedirect = NextResponse.redirect(new URL(target, origin));
+
+  response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'set-cookie') {
+      finalRedirect.headers.append('set-cookie', value);
+    }
   });
+
+  return finalRedirect;
 }
