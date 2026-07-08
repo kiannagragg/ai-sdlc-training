@@ -124,6 +124,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return supabaseResponse;
   }
 
+  // /sysadmin[/...] — sys_admin only (bare path + sub-paths)
+  if (pathname === '/sysadmin' || pathname.startsWith('/sysadmin/')) {
+    if (role !== 'sys_admin') {
+      if (role === 'employee') {
+        return NextResponse.redirect(new URL('/employee', request.url));
+      }
+      if (role === 'manager') {
+        return NextResponse.redirect(new URL('/manager', request.url));
+      }
+      if (role === 'hr_admin') {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+    }
+    return supabaseResponse;
+  }
+
   // ── Unmatched paths pass through ────────────────────────────────────
   return supabaseResponse;
 }
