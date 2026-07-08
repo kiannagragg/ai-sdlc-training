@@ -84,16 +84,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const role = profile.role as UserRole;
 
   // ── Route enforcement (most-specific path first) ────────────────────
-  // /admin/users/* — sys_admin only
-  if (pathname.startsWith('/admin/users/')) {
+  // /admin/users[/...] — sys_admin only (bare path + sub-paths)
+  if (pathname === '/admin/users' || pathname.startsWith('/admin/users/')) {
     if (!ALLOWED_ADMIN_USERS.includes(role)) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
     return supabaseResponse;
   }
 
-  // /admin/* — hr_admin or sys_admin
-  if (pathname.startsWith('/admin/')) {
+  // /admin[/...] — hr_admin or sys_admin (bare path + sub-paths)
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     if (!ALLOWED_ADMIN.includes(role)) {
       if (role === 'employee') {
         return NextResponse.redirect(new URL('/employee', request.url));
@@ -108,16 +108,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return supabaseResponse;
   }
 
-  // /manager/* — manager, hr_admin, or sys_admin
-  if (pathname.startsWith('/manager/')) {
+  // /manager[/...] — manager, hr_admin, or sys_admin (bare path + sub-paths)
+  if (pathname === '/manager' || pathname.startsWith('/manager/')) {
     if (!ALLOWED_MANAGER.includes(role)) {
       return NextResponse.redirect(new URL('/employee', request.url));
     }
     return supabaseResponse;
   }
 
-  // /employee/* — all four roles pass (dead branch for current roles)
-  if (pathname.startsWith('/employee/')) {
+  // /employee[/...] — all four roles pass (bare path + sub-paths)
+  if (pathname === '/employee' || pathname.startsWith('/employee/')) {
     if (!ALLOWED_EMPLOYEE.includes(role)) {
       return NextResponse.redirect(new URL('/login', request.url));
     }

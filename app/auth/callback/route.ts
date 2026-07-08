@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
   // 1. We create a generic next response solely to capture cookie mutations
   let response = NextResponse.next();
 
+  const sessionCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value);
             response.cookies.set(name, value, options);
+            sessionCookies.push({ name, value, options: options ?? {} });
           });
         },
       },
@@ -78,12 +81,10 @@ export async function GET(request: NextRequest) {
   // 3. Create our final dashboard destination redirect response
   const finalRedirect = NextResponse.redirect(new URL(target, origin));
 
-  // 4. CRITICAL STEP: Copy all generated session cookies over to the final headers
-  response.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'set-cookie') {
-      finalRedirect.headers.append('set-cookie', value);
-    }
-  });
+  // 4. Transfer all Supabase auth session cookies to the final redirect
+  for (const { name, value, options } of sessionCookies) {
+    finalRedirect.cookies.set(name, value, options);
+  }
 
   return finalRedirect;
 }
