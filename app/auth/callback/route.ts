@@ -44,6 +44,14 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
+    console.error('[auth/callback] exchangeCodeForSession failed', {
+      code: code?.slice(0, 8) + '...',
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      errorStatus: error?.status,
+      cookieNames: request.cookies.getAll().map(c => c.name),
+      url: request.url,
+    });
     return NextResponse.redirect(new URL('/login?error=auth_failed', origin));
   }
 
