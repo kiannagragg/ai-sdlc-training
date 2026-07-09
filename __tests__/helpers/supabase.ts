@@ -11,33 +11,37 @@ const SUPABASE_URL = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
 const SUPABASE_ANON_KEY = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
+// Unique per-process to avoid conflicts from prior test runs
+// (Supabase Auth identities are not fully cleaned up on user deletion).
+const UID = Date.now().toString(36);
+
 export const TEST_USERS = {
   aliceManager: {
-    email: 'manager@stratpoint.com',
+    email: `manager+t${UID}@stratpoint.com`,
     name: 'Alice Manager',
     role: 'manager' as const,
     department: 'Engineering',
   },
   bobEmployee: {
-    email: 'employee1@stratpoint.com',
+    email: `employee1+t${UID}@stratpoint.com`,
     name: 'Bob Employee',
     role: 'employee' as const,
     department: 'Engineering',
   },
   carolEmployee: {
-    email: 'employee2@stratpoint.com',
+    email: `employee2+t${UID}@stratpoint.com`,
     name: 'Carol Employee',
     role: 'employee' as const,
     department: 'Engineering',
   },
   danaHRAdmin: {
-    email: 'hr@stratpoint.com',
+    email: `hr+t${UID}@stratpoint.com`,
     name: 'Dana HRAdmin',
     role: 'hr_admin' as const,
     department: 'HR',
   },
   evanSysAdmin: {
-    email: 'sysadmin@stratpoint.com',
+    email: `sysadmin+t${UID}@stratpoint.com`,
     name: 'Evan SysAdmin',
     role: 'sys_admin' as const,
     department: 'IT',
@@ -55,7 +59,7 @@ export function createServiceClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CLIENT_OPTIONS);
 }
 
-function createAnonClient(): SupabaseClient {
+export function createAnonClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, CLIENT_OPTIONS);
 }
 

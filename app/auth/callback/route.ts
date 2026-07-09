@@ -5,10 +5,10 @@ import type { Database } from '@/types/supabase';
 const STRATPOINT_DOMAIN = '@stratpoint.com';
 
 const roleToDashboard: Record<string, string> = {
-  employee: '/employee',
-  manager: '/manager',
-  hr_admin: '/admin',
-  sys_admin: '/sysadmin',
+  employee: '/employee/dashboard',
+  manager: '/manager/approvals',
+  hr_admin: '/admin/requests',
+  sys_admin: '/admin/users',
 };
 
 export async function GET(request: NextRequest) {
