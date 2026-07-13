@@ -17,10 +17,17 @@ Leave Management System for Meridian Corp (800 employees, 120 managers, 5 HR, 1 
 - **CI/CD**: GitHub Actions (lint, typecheck, test, migrate)
 
 ## Backend Standards
-- Every mutation Route Handler uses supabase-js service client for DB writes,
-  browser client for reads
-- SET app.current_user_id before every mutation for audit actor tracking
-- Atomic transactions for balance deduction (BEGIN/COMMIT within handler)
+- Every mutation Route Handler uses a session-scoped supabase-js server client
+  (user JWT) for SECURITY DEFINER RPC calls — the RPC derives the acting user
+  from auth.uid() internally, so the session must be the end user, not the
+  service role
+- Read-only Route Handlers use the service-role client when bypassing RLS
+  (balance checks, conflict detection, admin lookups)
+- Actor identity for audit logging is derived via auth.uid() inside each
+  SECURITY DEFINER RPC — the Route Handler never passes or sets the actor
+  explicitly
+- Atomic balance transactions are encapsulated inside SECURITY DEFINER RPC
+  functions, never in Route Handler code
 - Notification dispatch is fire-and-forget (void call, never awaited before response)
 - Error responses use AppError class → { error: { code, message, details },
   requestId } format

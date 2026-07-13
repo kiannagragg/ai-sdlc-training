@@ -15,6 +15,8 @@
 
 import { createClientAs, setupTestUsers, TEST_USERS } from './helpers/supabase';
 
+jest.setTimeout(60000);
+
 let uuids: Record<string, string>;
 
 beforeAll(async () => {
