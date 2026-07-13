@@ -32,17 +32,18 @@
 -- Step 1: Create the leave_documents bucket (idempotent)
 -- -----------------------------------------------------------------------------
 
-SELECT storage.create_bucket(
-  'leave_documents',                                  -- bucket id
-  'leave_documents',                                  -- bucket name
-  false,                                              -- not public
-  5242880,                                            -- 5 MB file_size_limit
-  null,                                               -- no default locale
-  ARRAY['application/pdf', 'image/jpeg', 'image/png'] -- allowed MIME types
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'leave_documents',
+  'leave_documents',
+  false,
+  5242880,
+  ARRAY['application/pdf', 'image/jpeg', 'image/png']
 )
-WHERE NOT EXISTS (
-  SELECT 1 FROM storage.buckets WHERE id = 'leave_documents'
-);
+ON CONFLICT (id) DO UPDATE SET 
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 
 -- -----------------------------------------------------------------------------
