@@ -15,6 +15,8 @@
 
 import { createServiceClient, createClientAs, setupTestUsers, TEST_USERS } from './helpers/supabase';
 
+jest.setTimeout(60000);
+
 const svc = createServiceClient();
 
 const AUDIT_ROW_ID = '00000000-0000-0000-0000-000000000010';

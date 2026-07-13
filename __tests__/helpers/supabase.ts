@@ -66,7 +66,7 @@ export function createAnonClient(): SupabaseClient {
 const clientCache = new Map<string, SupabaseClient>();
 
 // Rate-limit protection for Supabase Auth API (staging)
-const AUTH_DELAY_MS = 1500;
+const AUTH_DELAY_MS = 2000;
 let lastAuthCallTime = 0;
 
 function delay(ms: number): Promise<void> {
@@ -88,12 +88,13 @@ async function retryOnRateLimit<T>(
 ): Promise<{ data: T | null; error: { message: string } | null }> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const result = await fn();
-    if (
-      !result.error ||
-      !result.error.message.toLowerCase().includes('rate limit')
-    ) {
-      return result;
-    }
+    if (!result.error) return result;
+    const msg = result.error.message.toLowerCase();
+    const retryable =
+      msg.includes('rate limit') ||
+      msg.includes('token has expired') ||
+      msg.includes('token is invalid');
+    if (!retryable) return result;
     if (attempt < maxRetries) {
       await delay((attempt + 1) * 2000);
     }
@@ -106,21 +107,27 @@ export async function createClientAs(email: string): Promise<SupabaseClient> {
   if (cached) return cached;
 
   const svc = createServiceClient();
-
-  await throttleAuthCall();
-  const { data: linkData, error: linkError } = await retryOnRateLimit(() =>
-    svc.auth.admin.generateLink({ type: 'magiclink', email }),
-  );
-  if (linkError) throw linkError;
-
-  await throttleAuthCall();
   const anonClient = createAnonClient();
-  const { data: authData, error: authError } = await retryOnRateLimit(() =>
-    anonClient.auth.verifyOtp({
-      email,
-      token: linkData.properties.email_otp,
-      type: 'email',
-    }),
+
+  // Wrap generateLink + verifyOtp as one retryable unit so a stale OTP
+  // triggers a fresh generateLink on the next attempt.
+  const { data: authData, error: authError } = await retryOnRateLimit(
+    async () => {
+      await throttleAuthCall();
+      const { data: linkData, error: linkError } =
+        await svc.auth.admin.generateLink({ type: 'magiclink', email });
+      if (linkError) {
+        return { data: null, error: linkError };
+      }
+
+      await delay(500);
+      await throttleAuthCall();
+      return anonClient.auth.verifyOtp({
+        email,
+        token: linkData.properties.email_otp,
+        type: 'email',
+      });
+    },
   );
   if (authError) throw authError;
 
