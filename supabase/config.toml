@@ -47,16 +47,14 @@ vector_port = 54328
 [storage]
 enabled = true
 
-[storage.buckets.supporting-docs]
+[storage.buckets.leave_documents]
 public = false
 file_size_limit = 5242880
 allowed_mime_types = [
   "application/pdf",
   "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp"
+  "image/png"
 ]
-objects_path = "supporting-docs/*"
+objects_path = "leave_documents/*"
 # Per-bucket CORS is not a supported local CLI config key (origins are
 # already restricted by [api] / [auth] site_url for local dev).
